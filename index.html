@@ -218,17 +218,15 @@ async function carregarSupabase(){
   const [fornos,prods,clis]=await Promise.all([api('fornos?select=*'),api('producoes?select=*'),api('clientes?select=*')]);
   if(Array.isArray(fornos)&&Array.isArray(prods)&&Array.isArray(clis)){
     supaOnline=true;
-    if(fornos.length||prods.length||clis.length){
+    if(fornos.length||prods.length||clis){
       db.fornos=fornos.map(f=>({id:f.id,nome:f.nome,tipo:f.tipo||'Alvenaria',cap:Number(f.cap)||0,status:f.status||'Ativo',obs:f.obs||''}));
       db.producoes=prods.map(p=>({id:p.id,fornoId:p.forno_id,inicio:p.inicio||'',fim:p.fim||'',madeira:Number(p.madeira)||0,qtd:Number(p.qtd)||0,status:p.status||'Em produção',obs:p.obs||''}));
       db.clientes=clis.map(c=>({id:c.id,nome:c.nome,tel:c.tel||'',cidade:c.cidade||'',qtd:Number(c.qtd)||0,preco:Number(c.preco)||0,data:c.data||'',status:c.status||'Agendado',obs:c.obs||''}));
       db.seq={forno:Math.max(0,...db.fornos.map(f=>f.id))+1,prod:Math.max(0,...db.producoes.map(p=>p.id))+1,cli:Math.max(0,...db.clientes.map(c=>c.id))+1};
       save();renderAll();
     } else {
-      // tabelas vazias: envia os dados locais de demonstração
-      db.fornos.forEach(f=>supaInsert('fornos',fornoRow(f)));
-      db.producoes.forEach(p=>supaInsert('producoes',prodRow(p)));
-      db.clientes.forEach(c=>supaInsert('clientes',cliRow(c)));
+      // banco vazio: limpa dados locais antigos para começar em branco
+      db=seed();save();renderAll();
     }
     toast('Conectado ao Supabase ☁️');
   } else {
@@ -240,28 +238,11 @@ async function carregarSupabase(){
 const LS='carvao360';
 let db=JSON.parse(localStorage.getItem(LS)||'null')||seed();
 function seed(){
-  const hoje=new Date(), iso=d=>d.toISOString().slice(0,10);
-  const m2=new Date(hoje);m2.setMonth(m2.getMonth()-1);
-  const m3=new Date(hoje);m3.setMonth(m3.getMonth()-2);
   return {
-    fornos:[
-      {id:1,nome:'Forno 01',tipo:'Alvenaria',cap:12,status:'Ativo',obs:'Perto do galpão'},
-      {id:2,nome:'Forno 02',tipo:'Alvenaria',cap:12,status:'Ativo',obs:''},
-      {id:3,nome:'Forno 03',tipo:'Metalógico (container)',cap:18,status:'Manutenção',obs:'Trocar vedação'},
-    ],
-    producoes:[
-      {id:1,fornoId:1,inicio:iso(m3),fim:'',madeira:12,qtd:0,status:'Em produção',obs:'João'},
-      {id:2,fornoId:2,inicio:iso(m2),fim:iso(new Date(m2.getTime()+6*864e5)),madeira:12,qtd:2900,status:'Concluído',obs:''},
-      {id:3,fornoId:1,inicio:iso(new Date(hoje.getTime()-8*864e5)),fim:iso(new Date(hoje.getTime()-2*864e5)),madeira:12,qtd:3050,status:'Concluído',obs:''},
-      {id:4,fornoId:2,inicio:iso(new Date(hoje.getTime()-5*864e5)),fim:'',madeira:12,qtd:0,status:'Em produção',obs:'Carlos'},
-    ],
-    clientes:[
-      {id:1,nome:'Supermercado Boa Churrasca',tel:'(65) 99999-1010',cidade:'Cuiabá',qtd:1000,preco:6.5,data:iso(new Date(hoje.getTime()+3*864e5)),status:'Agendado',obs:'Saca de 20kg'},
-      {id:2,nome:'Distribuidora Pontes',tel:'(65) 98888-2020',cidade:'Varzea Grande',qtd:2000,preco:6.0,data:iso(new Date(hoje.getTime()+7*864e5)),status:'Agendado',obs:'Retira no pátio'},
-      {id:3,nome:'Churrascaria Fogo de Chão',tel:'(65) 97777-3030',cidade:'Cuiabá',qtd:600,preco:7.0,data:iso(m2),status:'Fornecido',obs:''},
-      {id:4,nome:'Açouque do Zé',tel:'(65) 96666-4040',cidade:'Rondonópolis',qtd:800,preco:6.8,data:iso(new Date(hoje.getTime()+10*864e5)),status:'Aguardando',obs:'Confirmar frete'},
-    ],
-    seq:{forno:4,prod:5,cli:5}
+    fornos:[],
+    producoes:[],
+    clientes:[],
+    seq:{forno:1,prod:1,cli:1}
   };
 }
 function save(){localStorage.setItem(LS,JSON.stringify(db))}
