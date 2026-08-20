@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carvão360 — Gestão de Produção de Carvão</title>
+<style>
+:root{
+  --bg:#0f1419;--panel:#161d24;--panel2:#1c252e;--border:#263340;
+  --txt:#e6edf3;--muted:#8b98a5;--accent:#f59e0b;--accent2:#10b981;
+  --red:#ef4444;--blue:#3b82f6;--purple:#a78bfa;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--txt);display:flex;min-height:100vh}
+/* SIDEBAR */
+#sidebar{width:230px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;z-index:10}
+.logo{padding:18px 16px;font-size:18px;font-weight:700;color:var(--accent);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.logo span{color:var(--txt)}
+nav{flex:1;padding:10px 8px;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;color:var(--muted);font-size:14px;margin-bottom:2px}
+.nav-item:hover{background:var(--panel2);color:var(--txt)}
+.nav-item.active{background:rgba(245,158,11,.12);color:var(--accent);font-weight:600}
+.sidebar-footer{padding:12px 16px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)}
+/* MAIN */
+#main{flex:1;margin-left:230px;padding:22px 26px;max-width:100%}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:12px;flex-wrap:wrap}
+.topbar h1{font-size:22px}
+.topbar .sub{color:var(--muted);font-size:13px;margin-top:3px}
+/* CARDS */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.card .lbl{font-size:12px;color:var(--muted);margin-bottom:6px}
+.card .val{font-size:22px;font-weight:700}
+.card .val.green{color:var(--accent2)}.card .val.amber{color:var(--accent)}.card .val.blue{color:var(--blue)}
+/* PANELS */
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;margin-bottom:18px}
+.panel-h{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.panel-h h3{font-size:15px}
+.panel-b{padding:16px;overflow-x:auto}
+/* TABLE */
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;padding:9px 10px;color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid rgba(38,51,64,.6);white-space:nowrap}
+tr:hover td{background:rgba(255,255,255,.02)}
+/* FORM */
+.btn{background:var(--accent);color:#111;border:none;border-radius:7px;padding:8px 14px;font-weight:600;cursor:pointer;font-size:13px}
+.btn:hover{filter:brightness(1.1)}
+.btn.sec{background:var(--panel2);color:var(--txt);border:1px solid var(--border)}
+.btn.sm{padding:5px 10px;font-size:12px}
+.btn.danger{background:transparent;color:var(--red);border:1px solid var(--red)}
+input,select,textarea{background:var(--panel2);border:1px solid var(--border);color:var(--txt);border-radius:7px;padding:8px 10px;font-size:13.5px;font-family:inherit;width:100%}
+input:focus,select:focus{outline:1px solid var(--accent)}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;margin-top:10px}
+.grid-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px 14px}
+/* STATUS */
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:600}
+.st-em_producao{background:rgba(245,158,11,.15);color:var(--accent)}
+.st-concluido{background:rgba(16,185,129,.15);color:var(--accent2)}
+.st-agendado{background:rgba(59,130,246,.15);color:var(--blue)}
+.st-fornecido{background:rgba(16,185,129,.15);color:var(--accent2)}
+.st-aguardando{background:rgba(139,152,165,.15);color:var(--muted)}
+.st-cancelado{background:rgba(239,68,68,.15);color:var(--red)}
+.st-atelier{background:rgba(167,139,250,.15);color:var(--purple)}
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-start;justify-content:center;z-index:100;padding:40px 16px;overflow-y:auto}
+.modal-bg.open{display:flex}
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:12px;width:100%;max-width:560px;padding:20px}
+.modal h3{margin-bottom:6px}
+.modal .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+/* MISC */
+.empty{text-align:center;color:var(--muted);padding:30px;font-size:14px}
+.bar-wrap{background:var(--panel2);border-radius:5px;height:8px;overflow:hidden;min-width:90px}
+.bar{height:100%;background:var(--accent);border-radius:5px}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--accent2);color:#06251a;padding:12px 18px;border-radius:8px;font-weight:600;z-index:200;display:none}
+.page{display:none}.page.active{display:block}
+.furnace-box{border:1px solid var(--border);border-radius:10px;padding:14px;background:var(--panel2)}
+.furnace-box .fname{font-weight:700;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.kv{font-size:12.5px;color:var(--muted);margin-bottom:4px}
+.kv b{color:var(--txt)}
+.forno-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+@media(max-width:768px){#sidebar{display:none}#main{margin-left:0}}
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div class="logo">🔥 Carvão<span>360</span></div>
+  <nav>
+    <div class="nav-item active" data-page="dashboard">📊 Dashboard</div>
+    <div class="nav-item" data-page="fornos">🔥 Fornos</div>
+    <div class="nav-item" data-page="producao">⚙️ Produção</div>
+    <div class="nav-item" data-page="clientes">👥 Clientes</div>
+    <div class="nav-item" data-page="relatorio">📄 Relatório Mensal</div>
+  </nav>
+  <div class="sidebar-footer">Dados salvos localmente no navegador</div>
+</div>
+
+<div id="main">
+  <!-- DASHBOARD -->
+  <div class="page active" id="page-dashboard">
+    <div class="topbar"><div><h1>Dashboard</h1><div class="sub" id="dash-date"></div></div>
+      <div style="display:flex;gap:8px"><button class="btn sec" onclick="openFornoModal()">+ Novo Forno</button><button class="btn" onclick="openProducaoModal()">+ Nova Produção</button></div></div>
+    <div class="cards" id="dash-cards"></div>
+    <div class="panel"><div class="panel-h"><h3>Status dos Fornos</h3></div>
+      <div class="panel-b forno-grid" id="dash-fornos"></div></div>
+    <div class="panel"><div class="panel-h"><h3>Próximos Clientes a Fornecer</h3></div>
+      <div class="panel-b" id="dash-clientes"></div></div>
+  </div>
+
+  <!-- FORNOS -->
+  <div class="page" id="page-fornos">
+    <div class="topbar"><div><h1>Fornos</h1><div class="sub">Cadastre e gerencie cada forno de carvão</div></div>
+      <button class="btn" onclick="openFornoModal()">+ Novo Forno</button></div>
+    <div class="panel"><div class="panel-b forno-grid" id="fornos-list"></div></div>
+    <div class="panel"><div class="panel-h"><h3>Histórico de Ciclos por Forno</h3></div>
+      <div class="panel-b" id="fornos-hist"></div></div>
+  </div>
+
+  <!-- PRODUCAO -->
+  <div class="page" id="page-producao">
+    <div class="topbar"><div><h1>Produção</h1><div class="sub">Ciclos de queima: início, término e quantidade produzida</div></div>
+      <button class="btn" onclick="openProducaoModal()">+ Nova Produção</button></div>
+    <div class="cards" id="prod-cards"></div>
+    <div class="panel"><div class="panel-h"><h3>Ciclos de Produção</h3></div>
+      <div class="panel-b" id="prod-table"></div></div>
+  </div>
+
+  <!-- CLIENTES -->
+  <div class="page" id="page-clientes">
+    <div class="topbar"><div><h1>Clientes</h1><div class="sub">Clientes agendados para compra/fornecimento do carvão produzido</div></div>
+      <button class="btn" onclick="openClienteModal()">+ Novo Cliente</button></div>
+    <div class="cards" id="cli-cards"></div>
+    <div class="panel"><div class="panel-h"><h3>Clientes Agendados</h3></div>
+      <div class="panel-b" id="cli-table"></div></div>
+  </div>
+
+  <!-- RELATORIO -->
+  <div class="page" id="page-relatorio">
+    <div class="topbar"><div><h1>Relatório Mensal de Produção</h1><div class="sub">Consolidado por mês e por forno</div></div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <select id="rel-mes" onchange="renderRelatorio()" style="width:auto"></select>
+        <select id="rel-ano" onchange="renderRelatorio()" style="width:auto"></select>
+        <button class="btn sec" onclick="imprimirRelatorio()">🖨️ Imprimir / PDF</button>
+      </div></div>
+    <div class="cards" id="rel-cards"></div>
+    <div class="panel"><div class="panel-h"><h3>Produção por Forno no Mês</h3></div>
+      <div class="panel-b" id="rel-fornos"></div></div>
+    <div class="panel"><div class="panel-h"><h3>Ciclos do Mês</h3></div>
+      <div class="panel-b" id="rel-ciclos"></div></div>
+    <div class="panel"><div class="panel-h"><h3>Vendas / Fornecimentos do Mês</h3></div>
+      <div class="panel-b" id="rel-vendas"></div></div>
+  </div>
+</div>
+
+<!-- MODAIS -->
+<div class="modal-bg" id="modal-forno"><div class="modal">
+  <h3 id="forno-title">Novo Forno</h3>
+  <div class="grid-form">
+    <div><label>Nome / Identificação *</label><input id="f-nome" placeholder="Ex: Forno 01"></div>
+    <div><label>Tipo</label><select id="f-tipo"><option>Alvenaria</option><option>Metalógico (container)</option><option>Rabo quente</option><option>Outro</option></select></div>
+    <div><label>Capacidade (m³ de madeira)</label><input id="f-cap" type="number" step="0.1"></div>
+    <div><label>Status</label><select id="f-status"><option>Ativo</option><option>Manutenção</option><option>Inativo</option></select></div>
+    <div style="grid-column:1/-1"><label>Observações</label><input id="f-obs" placeholder="Localização, peculiaridades..."></div>
+  </div>
+  <div class="actions"><button class="btn sec" onclick="closeModals()">Cancelar</button><button class="btn" onclick="saveForno()">Salvar Forno</button></div>
+</div></div>
+
+<div class="modal-bg" id="modal-producao"><div class="modal">
+  <h3 id="prod-title">Nova Produção (Ciclo de Queima)</h3>
+  <div class="grid-form">
+    <div><label>Forno *</label><select id="p-forno"></select></div>
+    <div><label>Data de Início *</label><input id="p-inicio" type="date"></div>
+    <div><label>Data de Término (prevista/real)</label><input id="p-fim" type="date"></div>
+    <div><label>Qtde de Madeira (m³)</label><input id="p-madeira" type="number" step="0.1"></div>
+    <div><label>Carvão Produzido (kg)</label><input id="p-qtd" type="number" step="0.1" placeholder="preencher ao finalizar"></div>
+    <div><label>Status</label><select id="p-status"><option>Em produção</option><option>Concluído</option><option>Cancelado</option></select></div>
+    <div style="grid-column:1/-1"><label>Responsável / Observações</label><input id="p-obs"></div>
+  </div>
+  <div class="actions"><button class="btn sec" onclick="closeModals()">Cancelar</button><button class="btn" onclick="saveProducao()">Salvar</button></div>
+</div></div>
+
+<div class="modal-bg" id="modal-cliente"><div class="modal">
+  <h3 id="cli-title">Novo Cliente Agendado</h3>
+  <div class="grid-form">
+    <div><label>Nome *</label><input id="c-nome"></div>
+    <div><label>Telefone / WhatsApp</label><input id="c-tel"></div>
+    <div><label>Cidade</label><input id="c-cidade"></div>
+    <div><label>Quantidade Acordada (kg)</label><input id="c-qtd" type="number" step="0.1"></div>
+    <div><label>Preço por kg (R$)</label><input id="c-preco" type="number" step="0.01"></div>
+    <div><label>Data Prevista de Fornecimento</label><input id="c-data" type="date"></div>
+    <div><label>Status</label><select id="c-status"><option>Agendado</option><option>Fornecido</option><option>Aguardando</option><option>Cancelado</option></select></div>
+    <div style="grid-column:1/-1"><label>Observações</label><input id="c-obs"></div>
+  </div>
+  <div class="actions"><button class="btn sec" onclick="closeModals()">Cancelar</button><button class="btn" onclick="saveCliente()">Salvar</button></div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ---------- SUPABASE ----------
+const SUPA_URL='https://hmodjesdlgevednosnkv.supabase.co/rest/v1/';
+const SUPA_KEY='sb_publishable_yCSMb37EYUAtP8pQp05IzQ_zceZAqAY';
+let supaOnline=false;
+async function api(path,opts={}){
+  try{
+    const r=await fetch(SUPA_URL+path,{...opts,headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,'Content-Type':'application/json',...(opts.headers||{})}});
+    if(!r.ok){console.warn('Supabase',r.status,await r.text());return null}
+    return r.status===204?null:await r.json();
+  }catch(e){console.warn('Supabase offline:',e.message);return null}
+}
+const fornoRow=f=>({id:f.id,nome:f.nome,tipo:f.tipo,cap:f.cap||0,status:f.status,obs:f.obs||''});
+const prodRow=p=>({id:p.id,forno_id:p.fornoId,inicio:p.inicio||null,fim:p.fim||null,madeira:p.madeira||0,qtd:p.qtd||0,status:p.status,obs:p.obs||''});
+const cliRow=c=>({id:c.id,nome:c.nome,tel:c.tel||'',cidade:c.cidade||'',qtd:c.qtd||0,preco:c.preco||0,data:c.data||null,status:c.status,obs:c.obs||''});
+function supaInsert(table,row){api(table,{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(row)})}
+function supaUpdate(table,id,row){api(table+'?id=eq.'+id,{method:'PATCH',body:JSON.stringify(row)})}
+function supaDelete(table,id){api(table+'?id=eq.'+id,{method:'DELETE'})}
+async function carregarSupabase(){
+  const [fornos,prods,clis]=await Promise.all([api('fornos?select=*'),api('producoes?select=*'),api('clientes?select=*')]);
+  if(Array.isArray(fornos)&&Array.isArray(prods)&&Array.isArray(clis)){
+    supaOnline=true;
+    if(fornos.length||prods.length||clis.length){
+      db.fornos=fornos.map(f=>({id:f.id,nome:f.nome,tipo:f.tipo||'Alvenaria',cap:Number(f.cap)||0,status:f.status||'Ativo',obs:f.obs||''}));
+      db.producoes=prods.map(p=>({id:p.id,fornoId:p.forno_id,inicio:p.inicio||'',fim:p.fim||'',madeira:Number(p.madeira)||0,qtd:Number(p.qtd)||0,status:p.status||'Em produção',obs:p.obs||''}));
+      db.clientes=clis.map(c=>({id:c.id,nome:c.nome,tel:c.tel||'',cidade:c.cidade||'',qtd:Number(c.qtd)||0,preco:Number(c.preco)||0,data:c.data||'',status:c.status||'Agendado',obs:c.obs||''}));
+      db.seq={forno:Math.max(0,...db.fornos.map(f=>f.id))+1,prod:Math.max(0,...db.producoes.map(p=>p.id))+1,cli:Math.max(0,...db.clientes.map(c=>c.id))+1};
+      save();renderAll();
+    } else {
+      // tabelas vazias: envia os dados locais de demonstração
+      db.fornos.forEach(f=>supaInsert('fornos',fornoRow(f)));
+      db.producoes.forEach(p=>supaInsert('producoes',prodRow(p)));
+      db.clientes.forEach(c=>supaInsert('clientes',cliRow(c)));
+    }
+    toast('Conectado ao Supabase ☁️');
+  } else {
+    toast('Supabase indisponível — usando dados locais');
+  }
+}
+
+// ---------- DADOS ----------
+const LS='carvao360';
+let db=JSON.parse(localStorage.getItem(LS)||'null')||seed();
+function seed(){
+  const hoje=new Date(), iso=d=>d.toISOString().slice(0,10);
+  const m2=new Date(hoje);m2.setMonth(m2.getMonth()-1);
+  const m3=new Date(hoje);m3.setMonth(m3.getMonth()-2);
+  return {
+    fornos:[
+      {id:1,nome:'Forno 01',tipo:'Alvenaria',cap:12,status:'Ativo',obs:'Perto do galpão'},
+      {id:2,nome:'Forno 02',tipo:'Alvenaria',cap:12,status:'Ativo',obs:''},
+      {id:3,nome:'Forno 03',tipo:'Metalógico (container)',cap:18,status:'Manutenção',obs:'Trocar vedação'},
+    ],
+    producoes:[
+      {id:1,fornoId:1,inicio:iso(m3),fim:'',madeira:12,qtd:0,status:'Em produção',obs:'João'},
+      {id:2,fornoId:2,inicio:iso(m2),fim:iso(new Date(m2.getTime()+6*864e5)),madeira:12,qtd:2900,status:'Concluído',obs:''},
+      {id:3,fornoId:1,inicio:iso(new Date(hoje.getTime()-8*864e5)),fim:iso(new Date(hoje.getTime()-2*864e5)),madeira:12,qtd:3050,status:'Concluído',obs:''},
+      {id:4,fornoId:2,inicio:iso(new Date(hoje.getTime()-5*864e5)),fim:'',madeira:12,qtd:0,status:'Em produção',obs:'Carlos'},
+    ],
+    clientes:[
+      {id:1,nome:'Supermercado Boa Churrasca',tel:'(65) 99999-1010',cidade:'Cuiabá',qtd:1000,preco:6.5,data:iso(new Date(hoje.getTime()+3*864e5)),status:'Agendado',obs:'Saca de 20kg'},
+      {id:2,nome:'Distribuidora Pontes',tel:'(65) 98888-2020',cidade:'Varzea Grande',qtd:2000,preco:6.0,data:iso(new Date(hoje.getTime()+7*864e5)),status:'Agendado',obs:'Retira no pátio'},
+      {id:3,nome:'Churrascaria Fogo de Chão',tel:'(65) 97777-3030',cidade:'Cuiabá',qtd:600,preco:7.0,data:iso(m2),status:'Fornecido',obs:''},
+      {id:4,nome:'Açouque do Zé',tel:'(65) 96666-4040',cidade:'Rondonópolis',qtd:800,preco:6.8,data:iso(new Date(hoje.getTime()+10*864e5)),status:'Aguardando',obs:'Confirmar frete'},
+    ],
+    seq:{forno:4,prod:5,cli:5}
+  };
+}
+function save(){localStorage.setItem(LS,JSON.stringify(db))}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',2200)}
+const fmt=n=>Number(n||0).toLocaleString('pt-BR',{maximumFractionDigits:1});
+const money=n=>'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtDate=s=>s?new Date(s+'T12:00').toLocaleDateString('pt-BR'):'—';
+const fornoName=id=>(db.fornos.find(f=>f.id===id)||{}).nome||'?';
+const MES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+// ---------- NAVEGAÇÃO ----------
+document.querySelectorAll('.nav-item').forEach(n=>n.onclick=()=>{
+  document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
+  n.classList.add('active');
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+n.dataset.page).classList.add('active');
+  renderAll();
+});
+function closeModals(){document.querySelectorAll('.modal-bg').forEach(m=>m.classList.remove('open'))}
+document.querySelectorAll('.modal-bg').forEach(m=>m.onclick=e=>{if(e.target===m)closeModals()});
+
+// ---------- CÁLCULOS ----------
+function concluidosMes(m,y){return db.producoes.filter(p=>p.status==='Concluído'&&p.fim&&new Date(p.fim+'T12:00').getMonth()===m&&new Date(p.fim+'T12:00').getFullYear()===y)}
+function estoqueAtual(){
+  const hoje=new Date();
+  const meses=db.producoes.filter(p=>p.status==='Concluído'&&p.fim&&new Date(p.fim+'T12:00')<=hoje).reduce((s,p)=>s+Number(p.qtd||0),0);
+  const vendido=db.clientes.filter(c=>c.status==='Fornecido').reduce((s,c)=>s+Number(c.qtd||0),0);
+  return meses-vendido;
+}
+
+// ---------- RENDER ----------
+function renderAll(){renderDash();renderFornos();renderProducao();renderClientes();renderRelatorio()}
+
+function renderDash(){
+  const hoje=new Date();
+  document.getElementById('dash-date').textContent=hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  const mesAtual=concluidosMes(hoje.getMonth(),hoje.getFullYear()).reduce((s,p)=>s+Number(p.qtd||0),0);
+  const emProd=db.producoes.filter(p=>p.status==='Em produção');
+  const agendados=db.clientes.filter(c=>c.status==='Agendado');
+  const demanda=agendados.reduce((s,c)=>s+Number(c.qtd||0),0);
+  const receita=agendados.reduce((s,c)=>s+Number(c.qtd||0)*Number(c.preco||0),0);
+  document.getElementById('dash-cards').innerHTML=`
+    <div class="card"><div class="lbl">Carvão produzido no mês</div><div class="val amber">${fmt(mesAtual)} kg</div></div>
+    <div class="card"><div class="lbl">Fornos em produção</div><div class="val">${emProd.length} / ${db.fornos.filter(f=>f.status==='Ativo').length}</div></div>
+    <div class="card"><div class="lbl">Estoque disponível</div><div class="val green">${fmt(estoqueAtual())} kg</div></div>
+    <div class="card"><div class="lbl">Demanda agendada</div><div class="val blue">${fmt(demanda)} kg</div></div>
+    <div class="card"><div class="lbl">Receita prevista</div><div class="val green">${money(receita)}</div></div>`;
+  document.getElementById('dash-fornos').innerHTML=db.fornos.map(f=>{
+    const ciclo=db.producoes.filter(p=>p.fornoId===f.id&&p.status==='Em produção').pop();
+    let inner;
+    if(ciclo){
+      const dias=Math.max(1,Math.round((Date.now()-new Date(ciclo.inicio+'T12:00'))/864e5));
+      inner=`<div class="kv">🔴 <b>Em produção</b> desde ${fmtDate(ciclo.inicio)} (${dias} ${dias>1?'dias':'dia'})</div>
+             <div class="kv">Madeira: <b>${fmt(ciclo.madeira)} m³</b> · Resp.: <b>${ciclo.obs||'—'}</b></div>
+             <div class="bar-wrap"><div class="bar" style="width:${Math.min(100,dias/7*100)}%"></div></div>`;
+    } else if(f.status!=='Ativo'){inner=`<div class="kv">⚠️ <b>${f.status}</b>${f.obs?' — '+f.obs:''}</div>`}
+    else inner=`<div class="kv" style="color:var(--accent2)">✔ Livre para novo ciclo</div>`;
+    const total=db.producoes.filter(p=>p.fornoId===f.id&&p.status==='Concluído').reduce((s,p)=>s+Number(p.qtd||0),0);
+    return `<div class="furnace-box"><div class="fname">🔥 ${f.nome}<span class="badge ${f.status==='Ativo'?'st-concluido':'st-cancelado'}">${f.status}</span></div>
+      <div class="kv">Tipo: <b>${f.tipo}</b> · Cap.: <b>${fmt(f.cap)} m³</b></div>${inner}
+      <div class="kv" style="margin-top:6px">Total histórico: <b>${fmt(total)} kg</b></div></div>`;
+  }).join('');
+  const prox=agendados.slice().sort((a,b)=>(a.data||'9999')<(b.data||'9999')?-1:1);
+  document.getElementById('dash-clientes').innerHTML=prox.length?`<table><tr><th>Cliente</th><th>Cidade</th><th>Data prevista</th><th>Qtde</th><th>Valor</th><th>Status</th></tr>${
+    prox.map(c=>`<tr><td><b>${c.nome}</b></td><td>${c.cidade||'—'}</td><td>${fmtDate(c.data)}</td><td>${fmt(c.qtd)} kg</td><td>${money(c.qtd*c.preco)}</td><td><span class="badge st-${c.status.toLowerCase()}">${c.status}</span></td></tr>`).join('')}</table>`
+    :'<div class="empty">Nenhum cliente agendado.</div>';
+}
+
+function renderFornos(){
+  document.getElementById('fornos-list').innerHTML=db.fornos.map(f=>{
+    const ciclos=db.producoes.filter(p=>p.fornoId===f.id);
+    const total=ciclos.filter(p=>p.status==='Concluído').reduce((s,p)=>s+Number(p.qtd||0),0);
+    const em=ciclos.some(p=>p.status==='Em produção');
+    return `<div class="furnace-box"><div class="fname">🔥 ${f.nome}<span class="badge ${em?'st-em_producao':(f.status==='Ativo'?'st-concluido':'st-cancelado')}">${em?'Em produção':f.status}</span></div>
+      <div class="kv">Tipo: <b>${f.tipo}</b></div><div class="kv">Capacidade: <b>${fmt(f.cap)} m³</b></div>
+      <div class="kv">Ciclos: <b>${ciclos.length}</b> · Produzido: <b>${fmt(total)} kg</b></div>
+      ${f.obs?`<div class="kv">${f.obs}</div>`:''}
+      <div style="margin-top:10px;display:flex;gap:6px">
+        <button class="btn sm" onclick="openProducaoModal(${f.id})">+ Produção</button>
+        <button class="btn sm sec" onclick="openFornoModal(${f.id})">Editar</button>
+        <button class="btn sm danger" onclick="delForno(${f.id})">Excluir</button>
+      </div></div>`;
+  }).join('')||'<div class="empty">Nenhum forno cadastrado. Clique em "+ Novo Forno".</div>';
+  document.getElementById('fornos-hist').innerHTML=`<table><tr><th>Forno</th><th>Início</th><th>Término</th><th>Dias</th><th>Madeira (m³)</th><th>Carvão (kg)</th><th>Rendimento</th><th>Status</th><th></th></tr>${
+    db.producoes.slice().sort((a,b)=>b.id-a.id).map(p=>{
+      const dias=p.fim?Math.round((new Date(p.fim)-new Date(p.inicio))/864e5):'—';
+      const rend=Number(p.madeira)>0&&Number(p.qtd)>0?fmt(p.qtd/p.madeira)+' kg/m³':'—';
+      return `<tr><td><b>${fornoName(p.fornoId)}</b></td><td>${fmtDate(p.inicio)}</td><td>${fmtDate(p.fim)}</td><td>${dias}</td><td>${fmt(p.madeira)}</td><td>${fmt(p.qtd)}</td><td>${rend}</td><td><span class="badge st-${p.status.toLowerCase().replace(' ','_')}">${p.status}</span></td>
+      <td><button class="btn sm sec" onclick="openProducaoModal(null,${p.id})">Editar</button></td></tr>`;
+    }).join('')}</table>`;
+}
+
+function renderProducao(){
+  const em=db.producoes.filter(p=>p.status==='Em produção');
+  const concl=db.producoes.filter(p=>p.status==='Concluído');
+  const totalGeral=concl.reduce((s,p)=>s+Number(p.qtd||0),0);
+  const rendMedio=(()=>{const m=concl.filter(p=>Number(p.madeira)>0);return m.length?fmt(m.reduce((s,p)=>s+p.qtd/p.madeira,0)/m.length):0})();
+  document.getElementById('prod-cards').innerHTML=`
+    <div class="card"><div class="lbl">Ciclos em produção</div><div class="val amber">${em.length}</div></div>
+    <div class="card"><div class="lbl">Ciclos concluídos</div><div class="val">${concl.length}</div></div>
+    <div class="card"><div class="lbl">Total produzido</div><div class="val green">${fmt(totalGeral)} kg</div></div>
+    <div class="card"><div class="lbl">Rendimento médio</div><div class="val blue">${rendMedio} kg/m³</div></div>`;
+  document.getElementById('prod-table').innerHTML=`<table><tr><th>#</th><th>Forno</th><th>Início</th><th>Término</th><th>Dias</th><th>Madeira (m³)</th><th>Carvão (kg)</th><th>Responsável</th><th>Status</th><th>Ações</th></tr>${
+    db.producoes.slice().sort((a,b)=>b.id-a.id).map(p=>{
+      const dias=p.fim?Math.round((new Date(p.fim)-new Date(p.inicio))/864e5):'—';
+      return `<tr><td>${p.id}</td><td><b>${fornoName(p.fornoId)}</b></td><td>${fmtDate(p.inicio)}</td><td>${fmtDate(p.fim)}</td><td>${dias}</td><td>${fmt(p.madeira)}</td><td>${fmt(p.qtd)}</td><td>${p.obs||'—'}</td>
+      <td><span class="badge st-${p.status.toLowerCase().replace(' ','_')}">${p.status}</span></td>
+      <td>${p.status==='Em produção'?`<button class="btn sm" onclick="finalizarCiclo(${p.id})">✔ Finalizar</button> `:''}<button class="btn sm sec" onclick="openProducaoModal(null,${p.id})">Editar</button> <button class="btn sm danger" onclick="delProducao(${p.id})">Exc</button></td></tr>`;
+    }).join('')}</table>`;
+}
+
+function renderClientes(){
+  const ag=db.clientes.filter(c=>c.status==='Agendado');
+  const forn=db.clientes.filter(c=>c.status==='Fornecido');
+  const totalForn=forn.reduce((s,c)=>s+Number(c.qtd||0),0);
+  const receitaForn=forn.reduce((s,c)=>s+Number(c.qtd||0)*Number(c.preco||0),0);
+  const estoque=estoqueAtual();
+  const demanda=ag.reduce((s,c)=>s+Number(c.qtd||0),0);
+  document.getElementById('cli-cards').innerHTML=`
+    <div class="card"><div class="lbl">Clientes agendados</div><div class="val blue">${ag.length}</div></div>
+    <div class="card"><div class="lbl">Demanda pendente</div><div class="val amber">${fmt(demanda)} kg</div></div>
+    <div class="card"><div class="lbl">Estoque disponível</div><div class="val ${estoque>=demanda?'green':''}" style="${estoque<demanda?'color:var(--red)':''}">${fmt(estoque)} kg</div></div>
+    <div class="card"><div class="lbl">Já fornecido</div><div class="val">${fmt(totalForn)} kg</div></div>
+    <div class="card"><div class="lbl">Receita realizada</div><div class="val green">${money(receitaForn)}</div></div>`;
+  document.getElementById('cli-table').innerHTML=`<table><tr><th>Cliente</th><th>Telefone</th><th>Cidade</th><th>Data prevista</th><th>Qtde (kg)</th><th>Preço/kg</th><th>Valor total</th><th>Status</th><th>Ações</th></tr>${
+    db.clientes.map(c=>`<tr><td><b>${c.nome}</b></td><td>${c.tel||'—'}</td><td>${c.cidade||'—'}</td><td>${fmtDate(c.data)}</td><td>${fmt(c.qtd)}</td><td>${c.preco?money(c.preco):'—'}</td><td>${money(c.qtd*c.preco)}</td>
+    <td><span class="badge st-${c.status.toLowerCase()}">${c.status}</span></td>
+    <td>${c.status!=='Fornecido'?`<button class="btn sm" onclick="marcarFornecido(${c.id})">✔ Fornecido</button> `:''}<button class="btn sm sec" onclick="openClienteModal(${c.id})">Editar</button> <button class="btn sm danger" onclick="delCliente(${c.id})">Exc</button></td></tr>`).join('')}</table>`;
+}
+
+function renderRelatorio(){
+  const selM=document.getElementById('rel-mes'),selA=document.getElementById('rel-ano');
+  if(!selM.options.length){
+    const hoje=new Date();
+    const anos=new Set([hoje.getFullYear(),hoje.getFullYear()-1]);
+    db.producoes.forEach(p=>{if(p.fim)anos.add(new Date(p.fim+'T12:00').getFullYear())});
+    selM.innerHTML=MES.map((m,i)=>`<option value="${i}" ${i===hoje.getMonth()?'selected':''}>${m}</option>`).join('');
+    selA.innerHTML=[...anos].sort().reverse().map(a=>`<option ${a===hoje.getFullYear()?'selected':''}>${a}</option>`).join('');
+  }
+  const m=+selM.value,y=+selA.value;
+  const cic=concluidosMes(m,y);
+  const totalKg=cic.reduce((s,p)=>s+Number(p.qtd||0),0);
+  const totalM3=cic.reduce((s,p)=>s+Number(p.madeira||0),0);
+  const vend=db.clientes.filter(c=>c.status==='Fornecido'&&c.data&&new Date(c.data+'T12:00').getMonth()===m&&new Date(c.data+'T12:00').getFullYear()===y);
+  const vendKg=vend.reduce((s,c)=>s+Number(c.qtd||0),0);
+  const vendRs=vend.reduce((s,c)=>s+Number(c.qtd||0)*Number(c.preco||0),0);
+  document.getElementById('rel-cards').innerHTML=`
+    <div class="card"><div class="lbl">Período</div><div class="val" style="font-size:17px">${MES[m]}/${y}</div></div>
+    <div class="card"><div class="lbl">Ciclos concluídos</div><div class="val">${cic.length}</div></div>
+    <div class="card"><div class="lbl">Madeira queimada</div><div class="val amber">${fmt(totalM3)} m³</div></div>
+    <div class="card"><div class="lbl">Carvão produzido</div><div class="val green">${fmt(totalKg)} kg</div></div>
+    <div class="card"><div class="lbl">Rendimento médio</div><div class="val blue">${totalM3?fmt(totalKg/totalM3):0} kg/m³</div></div>
+    <div class="card"><div class="lbl">Vendas do mês</div><div class="val">${fmt(vendKg)} kg · ${money(vendRs)}</div></div>`;
+  const porForno=db.fornos.map(f=>{
+    const c=cic.filter(p=>p.fornoId===f.id);
+    const kg=c.reduce((s,p)=>s+Number(p.qtd||0),0);
+    return {f,kg,pct:totalKg?kg/totalKg*100:0};
+  }).sort((a,b)=>b.kg-a.kg);
+  document.getElementById('rel-fornos').innerHTML=`<table><tr><th>Forno</th><th>Tipo</th><th>Ciclos</th><th>Carvão (kg)</th><th>% do total</th></tr>${
+    porForno.map(x=>`<tr><td><b>🔥 ${x.f.nome}</b></td><td>${x.f.tipo}</td><td>${cic.filter(p=>p.fornoId===x.f.id).length}</td><td>${fmt(x.kg)}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="bar-wrap"><div class="bar" style="width:${x.pct}%"></div></div>${x.pct.toFixed(0)}%</div></td></tr>`).join('')}</table>`;
+  document.getElementById('rel-ciclos').innerHTML=cic.length?`<table><tr><th>#</th><th>Forno</th><th>Início</th><th>Término</th><th>Dias</th><th>Madeira (m³)</th><th>Carvão (kg)</th><th>Rendimento</th></tr>${
+    cic.map(p=>`<tr><td>${p.id}</td><td>${fornoName(p.fornoId)}</td><td>${fmtDate(p.inicio)}</td><td>${fmtDate(p.fim)}</td><td>${Math.round((new Date(p.fim)-new Date(p.inicio))/864e5)}</td><td>${fmt(p.madeira)}</td><td>${fmt(p.qtd)}</td><td>${p.madeira?fmt(p.qtd/p.madeira)+' kg/m³':'—'}</td></tr>`).join('')}</table>`
+    :'<div class="empty">Nenhum ciclo concluído neste mês.</div>';
+  document.getElementById('rel-vendas').innerHTML=vend.length?`<table><tr><th>Cliente</th><th>Cidade</th><th>Data</th><th>Qtde (kg)</th><th>Valor</th></tr>${
+    vend.map(c=>`<tr><td><b>${c.nome}</b></td><td>${c.cidade||'—'}</td><td>${fmtDate(c.data)}</td><td>${fmt(c.qtd)}</td><td>${money(c.qtd*c.preco)}</td></tr>`).join('')}
+    <tr><td colspan="3"><b>TOTAL</b></td><td><b>${fmt(vendKg)} kg</b></td><td><b>${money(vendRs)}</b></td></tr></table>`
+    :'<div class="empty">Nenhuma venda/fornecimento registrado neste mês.</div>';
+}
+function imprimirRelatorio(){window.print()}
+
+// ---------- FORNO CRUD ----------
+function openFornoModal(id){
+  const f=db.fornos.find(x=>x.id===id);
+  document.getElementById('forno-title').textContent=f?'Editar Forno':'Novo Forno';
+  document.getElementById('f-nome').value=f?f.nome:'';
+  document.getElementById('f-tipo').value=f?f.tipo:'Alvenaria';
+  document.getElementById('f-cap').value=f?f.cap:'';
+  document.getElementById('f-status').value=f?f.status:'Ativo';
+  document.getElementById('f-obs').value=f?f.obs:'';
+  document.getElementById('modal-forno').classList.add('open');
+  window._editFornoId=id||null;
+}
+function saveForno(){
+  const nome=document.getElementById('f-nome').value.trim();
+  if(!nome)return toast('Informe o nome do forno');
+  const data={nome,tipo:document.getElementById('f-tipo').value,cap:+document.getElementById('f-cap').value||0,status:document.getElementById('f-status').value,obs:document.getElementById('f-obs').value.trim()};
+  if(window._editFornoId){const f=db.fornos.find(x=>x.id===window._editFornoId);Object.assign(f,data);supaUpdate('fornos',f.id,fornoRow(f))}
+  else{const f={id:db.seq.forno++,...data};db.fornos.push(f);supaInsert('fornos',fornoRow(f))}
+  save();closeModals();renderAll();toast('Forno salvo com sucesso');
+}
+function delForno(id){
+  const em=db.producoes.some(p=>p.fornoId===id&&p.status==='Em produção');
+  if(em)return toast('Finalize a produção em andamento antes de excluir');
+  if(!confirm('Excluir este forno? Os ciclos registrados também serão removidos.'))return;
+  db.producoes.filter(p=>p.fornoId===id).forEach(p=>supaDelete('producoes',p.id));
+  supaDelete('fornos',id);
+  db.fornos=db.fornos.filter(f=>f.id!==id);
+  db.producoes=db.producoes.filter(p=>p.fornoId!==id);
+  save();renderAll();toast('Forno excluído');
+}
+
+// ---------- PRODUCAO CRUD ----------
+function openProducaoModal(fornoId,prodId){
+  const sel=document.getElementById('p-forno');
+  sel.innerHTML=db.fornos.filter(f=>f.status!=='Inativo').map(f=>`<option value="${f.id}">${f.nome}</option>`).join('')||'<option value="">Cadastre um forno primeiro</option>';
+  const p=db.producoes.find(x=>x.id===prodId);
+  document.getElementById('prod-title').textContent=p?'Editar Produção':'Nova Produção (Ciclo de Queima)';
+  document.getElementById('p-forno').value=p?p.fornoId:(fornoId||'');
+  document.getElementById('p-inicio').value=p?p.inicio:new Date().toISOString().slice(0,10);
+  document.getElementById('p-fim').value=p?p.fim:'';
+  document.getElementById('p-madeira').value=p?p.madeira:'';
+  document.getElementById('p-qtd').value=p?p.qtd:'';
+  document.getElementById('p-status').value=p?p.status:'Em produção';
+  document.getElementById('p-obs').value=p?p.obs:'';
+  document.getElementById('modal-producao').classList.add('open');
+}
+function saveProducao(){
+  const fornoId=+document.getElementById('p-forno').value;
+  if(!fornoId)return toast('Cadastre um forno primeiro');
+  const inicio=document.getElementById('p-inicio').value;
+  if(!inicio)return toast('Informe a data de início');
+  const data={fornoId,inicio,fim:document.getElementById('p-fim').value,madeira:+document.getElementById('p-madeira').value||0,qtd:+document.getElementById('p-qtd').value||0,status:document.getElementById('p-status').value,obs:document.getElementById('p-obs').value.trim()};
+  if(data.status==='Concluído'&&!data.fim)data.fim=new Date().toISOString().slice(0,10);
+  if(data.status==='Concluído'&&!data.qtd)return toast('Informe a quantidade de carvão produzida para concluir');
+  if(window._editProdId){const p=db.producoes.find(x=>x.id===window._editProdId);Object.assign(p,data);supaUpdate('producoes',p.id,prodRow(p))}
+  else{const p={id:db.seq.prod++,...data};db.producoes.push(p);supaInsert('producoes',prodRow(p))}
+  save();closeModals();renderAll();toast('Produção salva');
+}
+function finalizarCiclo(id){
+  const q=prompt('Quantidade de carvão produzida (kg):');
+  if(q===null)return;
+  const p=db.producoes.find(x=>x.id===id);
+  p.qtd=+q||0;p.status='Concluído';p.fim=p.fim||new Date().toISOString().slice(0,10);
+  supaUpdate('producoes',p.id,prodRow(p));
+  save();renderAll();toast('Ciclo finalizado: '+fmt(p.qtd)+' kg');
+}
+function delProducao(id){
+  if(!confirm('Excluir este registro de produção?'))return;
+  supaDelete('producoes',id);
+  db.producoes=db.producoes.filter(p=>p.id!==id);
+  save();renderAll();toast('Registro excluído');
+}
+// guardar id de edição ao abrir modal
+const _origOpenP=openProducaoModal;
+openProducaoModal=function(fornoId,prodId){window._editProdId=prodId||null;_origOpenP(fornoId,prodId)};
+
+// ---------- CLIENTE CRUD ----------
+function openClienteModal(id){
+  const c=db.clientes.find(x=>x.id===id);
+  document.getElementById('cli-title').textContent=c?'Editar Cliente':'Novo Cliente Agendado';
+  document.getElementById('c-nome').value=c?c.nome:'';
+  document.getElementById('c-tel').value=c?c.tel:'';
+  document.getElementById('c-cidade').value=c?c.cidade:'';
+  document.getElementById('c-qtd').value=c?c.qtd:'';
+  document.getElementById('c-preco').value=c?c.preco:'';
+  document.getElementById('c-data').value=c?c.data:'';
+  document.getElementById('c-status').value=c?c.status:'Agendado';
+  document.getElementById('c-obs').value=c?c.obs:'';
+  document.getElementById('modal-cliente').classList.add('open');
+  window._editCliId=id||null;
+}
+function saveCliente(){
+  const nome=document.getElementById('c-nome').value.trim();
+  if(!nome)return toast('Informe o nome do cliente');
+  const data={nome,tel:document.getElementById('c-tel').value.trim(),cidade:document.getElementById('c-cidade').value.trim(),qtd:+document.getElementById('c-qtd').value||0,preco:+document.getElementById('c-preco').value||0,data:document.getElementById('c-data').value,status:document.getElementById('c-status').value,obs:document.getElementById('c-obs').value.trim()};
+  if(window._editCliId){const c=db.clientes.find(x=>x.id===window._editCliId);Object.assign(c,data);supaUpdate('clientes',c.id,cliRow(c))}
+  else{const c={id:db.seq.cli++,...data};db.clientes.push(c);supaInsert('clientes',cliRow(c))}
+  save();closeModals();renderAll();toast('Cliente salvo');
+}
+function marcarFornecido(id){
+  const c=db.clientes.find(x=>x.id===id);
+  c.status='Fornecido';if(!c.data)c.data=new Date().toISOString().slice(0,10);
+  supaUpdate('clientes',c.id,cliRow(c));
+  save();renderAll();toast('Fornecimento registrado');
+}
+function delCliente(id){
+  if(!confirm('Excluir este cliente?'))return;
+  supaDelete('clientes',id);
+  db.clientes=db.clientes.filter(c=>c.id!==id);
+  save();renderAll();toast('Cliente excluído');
+}
+
+renderAll();
+carregarSupabase();
+</script>
+</body>
+</html>
