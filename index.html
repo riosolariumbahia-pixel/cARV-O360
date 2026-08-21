@@ -222,6 +222,13 @@ label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;margin-t
   <div class="bn" data-page="relatorio"><span class="ic">📄</span>Relatório</div>
 </div>
 
+<div class="modal-bg" id="modal-finalizar"><div class="modal">
+  <h3>Finalizar Ciclo de Queima</h3>
+  <label>Quantidade de carvão produzida (kg) *</label>
+  <input id="fin-qtd" type="number" step="0.1" placeholder="Ex: 2500">
+  <div class="actions"><button class="btn sec" onclick="closeModals()">Cancelar</button><button class="btn" onclick="confirmarFinalizacao()">✔ Concluir Ciclo</button></div>
+</div></div>
+
 <div class="modal-bg" id="modal-mod"><div class="modal">
   <h3 id="mod-title"></h3>
   <div class="grid-form" id="mod-fields"></div>
@@ -536,12 +543,17 @@ function saveProducao(){
   save();closeModals();renderAll();toast('Produção salva');
 }
 function finalizarCiclo(id){
-  const q=prompt('Quantidade de carvão produzida (kg):');
-  if(q===null)return;
-  const p=db.producoes.find(x=>x.id===id);
+  window._finId=id;
+  document.getElementById('fin-qtd').value='';
+  document.getElementById('modal-finalizar').classList.add('open');
+}
+function confirmarFinalizacao(){
+  const q=document.getElementById('fin-qtd').value;
+  if(!q)return toast('Informe a quantidade produzida');
+  const p=db.producoes.find(x=>x.id===window._finId);
   p.qtd=+q||0;p.status='Concluído';p.fim=p.fim||new Date().toISOString().slice(0,10);
   supaUpdate('producoes',p.id,prodRow(p));
-  save();renderAll();toast('Ciclo finalizado: '+fmt(p.qtd)+' kg');
+  save();closeModals();renderAll();toast('Ciclo finalizado: '+fmt(p.qtd)+' kg');
 }
 function delProducao(id){
   if(!confirm('Excluir este registro de produção?'))return;
@@ -634,6 +646,14 @@ function modRow(k,r){const o={id:r.id};MODULOS[k].fields.forEach(f=>o[f.k]=r[f.k
     document.getElementById('main').insertBefore(pg,document.getElementById('page-relatorio'));
     const ni=document.createElement('div');ni.className='nav-item';ni.dataset.page=k;ni.textContent=`${m.icone} ${m.titulo}`;nav.appendChild(ni);
     const bi=document.createElement('div');bi.className='bn';bi.dataset.page=k;bi.innerHTML=`<span class="ic">${m.icone}</span>${m.titulo.split(' ')[0]}`;bn.appendChild(bi);
+  });
+  // (re)vincula o clique em TODOS os itens de navegação, inclusive os novos
+  document.querySelectorAll('.nav-item,#bottomnav .bn').forEach(n=>n.onclick=()=>{
+    document.querySelectorAll('.nav-item,#bottomnav .bn').forEach(x=>x.classList.remove('active'));
+    n.classList.add('active');
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.getElementById('page-'+n.dataset.page).classList.add('active');
+    window.scrollTo(0,0);renderAll();
   });
 })();
 function openModModal(k,id){
