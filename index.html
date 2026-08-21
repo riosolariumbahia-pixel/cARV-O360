@@ -114,6 +114,7 @@ label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;margin-t
     <div class="topbar"><div><h1>Dashboard</h1><div class="sub" id="dash-date"></div></div>
       <div style="display:flex;gap:8px"><button class="btn sec" onclick="openFornoModal()">+ Novo Forno</button><button class="btn" onclick="openProducaoModal()">+ Nova Produção</button></div></div>
     <div class="cards" id="dash-cards"></div>
+    <div class="cards" id="dash-cards2"></div>
     <div class="panel"><div class="panel-h"><h3>Status dos Fornos</h3></div>
       <div class="panel-b forno-grid" id="dash-fornos"></div></div>
     <div class="panel"><div class="panel-h"><h3>Próximos Clientes a Fornecer</h3></div>
@@ -220,6 +221,12 @@ label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;margin-t
   <div class="bn" data-page="clientes"><span class="ic">👥</span>Clientes</div>
   <div class="bn" data-page="relatorio"><span class="ic">📄</span>Relatório</div>
 </div>
+
+<div class="modal-bg" id="modal-mod"><div class="modal">
+  <h3 id="mod-title"></h3>
+  <div class="grid-form" id="mod-fields"></div>
+  <div class="actions"><button class="btn sec" onclick="closeModals()">Cancelar</button><button class="btn" onclick="saveMod()">Salvar</button></div>
+</div></div>
 
 <div class="toast" id="toast"></div>
 
@@ -589,8 +596,123 @@ function delCliente(id){
   save();renderAll();toast('Cliente excluído');
 }
 
+// ===================== BRIQUETE360 — MÓDULOS ERP =====================
+const MODULOS={
+  fornecedores:{icone:'🏭',titulo:'Fornecedores',sub:'Serrarias, carvoarias, madeireiras, parafina, aglutinantes e transportadoras',
+    fields:[{k:'nome',l:'Nome *',req:1},{k:'tipo',l:'Tipo',t:'select',o:['Serraria','Carvoaria','Madeireira','Parafina','Aglutinante','Transportadora','Outro']},{k:'tel',l:'Telefone / WhatsApp'},{k:'cidade',l:'Cidade'},{k:'estado',l:'UF'},{k:'produto',l:'Produto fornecido'},{k:'preco',l:'Preço médio (R$)',t:'number'},{k:'ultimo',l:'Último fornecimento',t:'date'},{k:'status',l:'Status',t:'select',o:['Ativo','Inativo']}],
+    cols:['nome','tipo','produto','cidade','estado','tel','preco','ultimo','status']},
+  pedidos:{icone:'📦',titulo:'Pedidos',sub:'Do orçamento à entrega — cada pedido gera demanda de produção',
+    fields:[{k:'cliente',l:'Cliente *',req:1},{k:'produto',l:'Produto *',req:1},{k:'qtd',l:'Quantidade (kg)',t:'number'},{k:'valor',l:'Valor total (R$)',t:'number'},{k:'desconto',l:'Desconto (R$)',t:'number'},{k:'frete',l:'Frete (R$)',t:'number'},{k:'entrega',l:'Data de entrega',t:'date'},{k:'vendedor',l:'Vendedor'},{k:'status',l:'Status',t:'select',o:['Orçamento','Aprovado','Em produção','Produzido','Faturado','Entregue','Cancelado']}],
+    cols:['cliente','produto','qtd','valor','entrega','vendedor','status']},
+  estoque:{icone:'🧺',titulo:'Estoque',sub:'Matéria-prima e produto acabado com alerta de estoque mínimo',
+    fields:[{k:'item',l:'Item *',req:1},{k:'cat',l:'Categoria',t:'select',o:['Matéria-prima','Produto acabado']},{k:'qtd',l:'Quantidade',t:'number'},{k:'un',l:'Unidade',t:'select',o:['kg','saca','m³','litro','un']},{k:'min',l:'Estoque mínimo',t:'number'},{k:'local',l:'Localização'}],
+    cols:['item','cat','qtd','un','min','local'],
+    custom(r){return r.qtd<Number(r.min||0)?'<span class="badge st-cancelado">ESTOQUE BAIXO</span>':''}},
+  financeiro:{icone:'💰',titulo:'Financeiro',sub:'Contas a receber, a pagar e fluxo de caixa',
+    fields:[{k:'descricao',l:'Descrição *',req:1},{k:'tipo',l:'Tipo',t:'select',o:['Receber','Pagar']},{k:'categoria',l:'Categoria',t:'select',o:['Vendas','Fornecedor','Salários','Energia','Combustível','Aluguel','Impostos','Outro']},{k:'forma',l:'Forma',t:'select',o:['PIX','Boleto','Cartão','Transferência','Dinheiro']},{k:'valor',l:'Valor (R$)',t:'number'},{k:'venc',l:'Vencimento',t:'date'},{k:'status',l:'Status',t:'select',o:['Previsto','Pago','Vencido']}],
+    cols:['descricao','tipo','categoria','forma','valor','venc','status']},
+  entregas:{icone:'🚚',titulo:'Logística / Entregas',sub:'Caminhões, motoristas, rotas, fretes e custos',
+    fields:[{k:'cliente',l:'Cliente / Pedido *',req:1},{k:'motorista',l:'Motorista'},{k:'veiculo',l:'Veículo / Placa'},{k:'rota',l:'Rota / Destino'},{k:'frete',l:'Custo do frete (R$)',t:'number'},{k:'data',l:'Data da entrega',t:'date'},{k:'status',l:'Status',t:'select',o:['Agendada','Carregando','Em rota','Entregue','Ocorrência','Cancelada']}],
+    cols:['cliente','motorista','veiculo','rota','frete','data','status']},
+  funil:{icone:'📈',titulo:'Vendas / Funil',sub:'Lead → Contato → Proposta → Negociação → Venda',
+    fields:[{k:'lead',l:'Lead / Prospect *',req:1},{k:'estagio',l:'Estágio',t:'select',o:['Lead','Contato','Proposta','Negociação','Venda']},{k:'valor',l:'Valor estimado (R$)',t:'number'},{k:'vendedor',l:'Vendedor'},{k:'previsao',l:'Previsão de fechamento',t:'date'}],
+    cols:['lead','estagio','valor','vendedor','previsao']},
+};
+Object.keys(MODULOS).forEach(k=>{if(!db[k])db[k]=[];if(!db.seq[k])db.seq[k]=1;MODULOS[k].table=k});
+save();
+const SL=(s)=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'_');
+function badge(status){return `<span class="badge st-${SL(status)||'aguardando'}">${status||'—'}</span>`}
+function modRow(k,r){const o={id:r.id};MODULOS[k].fields.forEach(f=>o[f.k]=r[f.k]!==undefined?r[f.k]:(f.t==='number'?0:''));return o}
+// páginas e navegação dinâmicas
+(function(){
+  const nav=document.querySelector('#sidebar nav'),bn=document.getElementById('bottomnav');
+  Object.entries(MODULOS).forEach(([k,m])=>{
+    const pg=document.createElement('div');pg.className='page';pg.id='page-'+k;
+    pg.innerHTML=`<div class="topbar"><div><h1>${m.icone} ${m.titulo}</h1><div class="sub">${m.sub}</div></div>
+      <button class="btn" onclick="openModModal('${k}')">+ Novo</button></div>
+      <div class="panel"><div class="panel-b" id="mod-tb-${k}"></div></div>`;
+    document.getElementById('main').insertBefore(pg,document.getElementById('page-relatorio'));
+    const ni=document.createElement('div');ni.className='nav-item';ni.dataset.page=k;ni.textContent=`${m.icone} ${m.titulo}`;nav.appendChild(ni);
+    const bi=document.createElement('div');bi.className='bn';bi.dataset.page=k;bi.innerHTML=`<span class="ic">${m.icone}</span>${m.titulo.split(' ')[0]}`;bn.appendChild(bi);
+  });
+})();
+function openModModal(k,id){
+  const m=MODULOS[k],r=db[k].find(x=>x.id===id);
+  document.getElementById('mod-title').textContent=(r?'Editar — ':'Novo — ')+m.titulo;
+  document.getElementById('mod-fields').innerHTML=m.fields.map(f=>{
+    const v=r?(r[f.k]!==undefined?r[f.k]:''):'';
+    if(f.t==='select')return `<div><label>${f.l}</label><select id="mf-${f.k}">${f.o.map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('')}</select></div>`;
+    return `<div><label>${f.l}</label><input id="mf-${f.k}" type="${f.t==='number'?'number':f.t==='date'?'date':'text'}" step="${f.t==='number'?'any':''}" value="${v}"></div>`;
+  }).join('');
+  document.getElementById('modal-mod').classList.add('open');
+  window._modK=k;window._modId=id||null;
+}
+function saveMod(){
+  const k=window._modK,m=MODULOS[k];
+  const data={};let ok=true;
+  m.fields.forEach(f=>{
+    let v=document.getElementById('mf-'+f.k).value;
+    if(f.t==='number')v=+v||0;
+    if(f.req&&!String(v).trim())ok=false;
+    data[f.k]=v;
+  });
+  if(!ok)return toast('Preencha os campos obrigatórios (*)');
+  if(window._modId){const r=db[k].find(x=>x.id===window._modId);Object.assign(r,data);supaUpdate(m.table,r.id,modRow(k,r))}
+  else{const r={id:db.seq[k]++,...data};db[k].push(r);supaInsert(m.table,modRow(k,r))}
+  save();closeModals();renderAll();toast('Registro salvo');
+}
+function delMod(k,id){
+  if(!confirm('Excluir este registro?'))return;
+  supaDelete(MODULOS[k].table,id);
+  db[k]=db[k].filter(r=>r.id!==id);
+  save();renderAll();toast('Registro excluído');
+}
+function renderMods(){
+  Object.entries(MODULOS).forEach(([k,m])=>{
+    const el=document.getElementById('mod-tb-'+k);if(!el)return;
+    el.innerHTML=db[k].length?`<table><tr>${m.cols.map(c=>`<th>${(m.fields.find(f=>f.k===c)||{}).l||c}</th>`).join('')}<th></th></tr>${
+      db[k].slice().sort((a,b)=>b.id-a.id).map(r=>`<tr>${m.cols.map(c=>{
+        let v=r[c];
+        if((m.fields.find(f=>f.k===c)||{}).t==='number'&&['valor','frete','preco','desconto'].includes(c))v=money(v);
+        else if(c==='venc'||c==='data'||c==='entrega'||c==='ultimo'||c==='previsao')v=fmtDate(v);
+        else if(['status','tipo','estagio','cat'].includes(c))v=badge(v);
+        return `<td>${v===''||v===undefined?'—':v}</td>`;
+      }).join('')}
+      <td>${m.custom?m.custom(r):''} <button class="btn sm sec" onclick="openModModal('${k}',${r.id})">Editar</button> <button class="btn sm danger" onclick="delMod('${k}',${r.id})">Exc</button></td></tr>`).join('')}</table>`
+      :'<div class="empty">Nenhum registro. Clique em "+ Novo".</div>';
+  });
+  const hoje=new Date();
+  const abertos=db.pedidos.filter(p=>['Orçamento','Aprovado','Em produção','Produzido'].includes(p.status));
+  const fatMes=db.pedidos.filter(p=>['Faturado','Entregue'].includes(p.status)&&p.entrega&&new Date(p.entrega+'T12:00').getMonth()===hoje.getMonth()&&new Date(p.entrega+'T12:00').getFullYear()===hoje.getFullYear()).reduce((s,p)=>s+Number(p.valor||0),0);
+  const aReceber=db.financeiro.filter(c=>c.tipo==='Receber'&&c.status!=='Pago').reduce((s,c)=>s+Number(c.valor||0),0);
+  const aPagar=db.financeiro.filter(c=>c.tipo==='Pagar'&&c.status!=='Pago').reduce((s,c)=>s+Number(c.valor||0),0);
+  const vendasFunil=db.funil.filter(f=>f.estagio==='Venda');
+  const conv=db.funil.length?vendasFunil.length/db.funil.length*100:0;
+  const baixo=db.estoque.filter(e=>e.qtd<Number(e.min||0)).length;
+  document.getElementById('dash-cards2').innerHTML=`
+    <div class="card"><div class="lbl">Pedidos em aberto</div><div class="val amber">${abertos.length}</div></div>
+    <div class="card"><div class="lbl">Faturamento do mês</div><div class="val green">${money(fatMes)}</div></div>
+    <div class="card"><div class="lbl">A receber (previsto)</div><div class="val blue">${money(aReceber)}</div></div>
+    <div class="card"><div class="lbl">A pagar (previsto)</div><div class="val" style="color:var(--red)">${money(aPagar)}</div></div>
+    <div class="card"><div class="lbl">Conversão do funil</div><div class="val">${conv.toFixed(0)}%</div></div>
+    <div class="card"><div class="lbl">Itens com estoque baixo</div><div class="val" style="${baixo?'color:var(--red)':''}">${baixo}</div></div>`;
+}
+async function carregarModulos(){
+  await Promise.all(Object.entries(MODULOS).map(async([k,m])=>{
+    const rows=await api(m.table+'?select=*&order=id');
+    if(Array.isArray(rows)&&rows.length){
+      db[k]=rows;db.seq[k]=Math.max(0,...rows.map(r=>r.id||0))+1;
+    }else if(Array.isArray(rows)&&!rows.length&&db[k].length){
+      db[k].forEach(r=>supaInsert(m.table,modRow(k,r)));
+    }
+  }));
+  save();renderMods();
+}
+const _renderAllBase=renderAll;
+renderAll=function(){_renderAllBase();renderMods()};
 renderAll();
 carregarSupabase();
+carregarModulos();
 </script>
 </body>
 </html>
